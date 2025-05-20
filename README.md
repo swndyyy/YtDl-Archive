@@ -54,8 +54,8 @@ Untuk dokumentasi lengkap, kunjungi:
 *👨‍💻 Author*
 YtDl-Archive dibuat dan dipelihara oleh:
 - *Nama:* SennNevertheless 
-- *GitHub:* [@SennNevertheless](https://github.com/SennNevertheless)  
-- *Email:* tanakadomp@gmail.com  
+- *GitHub:* [@SennaNetwork](https://github.com/swndyy)  
+- *Email:* sennanetwork@gmail.com  
 
 ---
 
@@ -80,6 +80,6 @@ YtDl-Archive/
 ---
 
 *❤️ Support*
-Jika Anda menemukan bug atau memiliki ide fitur baru, silakan buat issue di [GitHub Issues](https://github.com/TanakaDomp/YtDl-Archive/issues). Kami menghargai kontribusi Anda!
+Jika Anda menemukan bug atau memiliki ide fitur baru, silakan buat issue di [GitHub Issues](https://github.com/swndyy/YtDl-Archive/issues). Kami menghargai kontribusi Anda!
 
 ---
