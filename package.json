@@ -1,9 +1,8 @@
 {
-  "name": "ytdl",
-  "version": "1.0.0",
+  "name": "ytdlssssmm",
+  "version": "1.1.1",
   "description": "",
   "main": "index.js",
-  "type": "commonjs",
   "scripts": {
     "start": "node index.js"
   },

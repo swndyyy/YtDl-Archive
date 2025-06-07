@@ -1,14 +1,21 @@
-const express = require("express");
+express = require("express");
 const ytSearch = require("yt-search");
 const ytdl = require("@distube/ytdl-core");
 const axios = require("axios");
-const FormData = require("form-data");
+const path = require("path");
 const cors = require("cors");
 const fs = require("fs")
 const app = express();
 const PORT = 7860;
 
+const tempDir = '/tmp/public'
+if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir);
+}
+
 app.use(cors());
+
+app.use("/files", express.static(tempDir));
 
 const agent = ytdl.createAgent(require("./cookie.json"));
 
@@ -32,27 +39,6 @@ function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-async function uploadTotmpfiles(media, filename) {
-    try {
-        const form = new FormData();
-        form.append("file", media, filename);
-
-        const response = await axios.post("https://tmpfiles.org/api/v1/upload", form, {
-            headers: {
-                ...form.getHeaders(),
-            },
-        });
-
-        const match = /https?:\/\/tmpfiles.org\/(.*)/.exec(response.data.data.url);
-        if (!match) {
-            throw new Error("Gagal mendapatkan URL hasil upload.");
-        }
-
-        return `https://tmpfiles.org/dl/${match[1]}`;
-    } catch (error) {
-        throw error; 
-    }
-}
 
 async function getVideoInfo(url) {
     const info = await ytdl.getInfo(url, {
@@ -60,14 +46,14 @@ async function getVideoInfo(url) {
     });
     const details = info.videoDetails;
     return {
-        author: details.author.name,
-        description: details.description || "Tidak ada deskripsi",
-        duration: `${Math.floor(details.lengthSeconds / 60)}:${details.lengthSeconds % 60} menit`,
-        likes: formatNumber(details.likes || 0),
-        thumbnail: details.thumbnails.pop().url,
         title: details.title,
+        description: details.description || "Tidak ada deskripsi",
+        thumbnail: details.thumbnails.pop().url,
+        duration: `${Math.floor(details.lengthSeconds / 60)}:${details.lengthSeconds % 60} menit`,
+        uploader: details.author.name,
         uploadDate: formatDate(details.uploadDate),
         views: formatNumber(details.viewCount),
+        likes: formatNumber(details.likes || 0),
     };
 }
 
@@ -92,22 +78,26 @@ app.get("/video", async (req, res) => {
             filter: "videoandaudio",
             quality: "highest"
         });
-        const metadata = await getVideoInfo(url);
+        const info = await getVideoInfo(url);
         const videoStream = ytdl(url, {
             format: videoFormat,
             agent
         });
-
-        const videoUrl = await uploadTotmpfiles(videoStream, "video.mp4");
-        res.json({
-            metadata,
-            results: {
-                quality: videoFormat.qualityLabel || "Tidak diketahui",
-                size: videoFormat.contentLength ? formatBytes(parseInt(videoFormat.contentLength)) : "Ukuran tidak tersedia",
-                url: videoUrl,
-            },
+        const filename = `video-${Date.now()}.mp4`
+        const writeStream = fs.createWriteStream(tempDir + '/' + filename);
+        videoStream.pipe(writeStream);
+        writeStream.on("finish", async () => {
+            res.json({
+                info,
+                result: {
+                    quality: videoFormat.qualityLabel || "Tidak diketahui",
+                    size: videoFormat.contentLength ? formatBytes(parseInt(videoFormat.contentLength)) : "Ukuran tidak tersedia",
+                    url: `${req.protocol}://${req.get('host')}/files/${filename}`,
+                },
+            });
         });
     } catch (error) {
+        console.log(error)
         res.status(500).json({
             error: "Gagal memproses video",
             details: error.message
@@ -135,22 +125,26 @@ app.get("/audio", async (req, res) => {
         const audioFormat = ytdl.chooseFormat(formats, {
             filter: "audioonly"
         });
-        const metadata = await getVideoInfo(url);
+        const info = await getVideoInfo(url);
         const audioStream = ytdl(url, {
             format: audioFormat,
             agent
         });
-
-        const audioUrl = await uploadTotmpfiles(audioStream, "audio.mp3");
-        res.json({
-            metadata,
-            results: {
-                quality: `${audioFormat.audioBitrate} kbps`,
-                size: audioFormat.contentLength ? formatBytes(parseInt(audioFormat.contentLength)) : "Ukuran tidak tersedia",
-                url: audioUrl,
-            },
+        const filename = `audio-${Date.now()}.mp3`
+        const writeStream = fs.createWriteStream(tempDir + '/' + filename);
+        audioStream.pipe(writeStream);
+        writeStream.on("finish", async () => {
+            res.json({
+                info,
+                result: {
+                    quality: `${audioFormat.audioBitrate} kbps`,
+                    size: audioFormat.contentLength ? formatBytes(parseInt(audioFormat.contentLength)) : "Ukuran tidak tersedia",
+                    url: `${req.protocol}://${req.get('host')}/files/${filename}`,
+                },
+            });
         });
     } catch (error) {
+        console.log(error)
         res.status(500).json({
             error: "Gagal memproses audio",
             details: error.message
